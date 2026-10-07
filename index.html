@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVM 2 post read</title>
+<style>
+:root{
+  --red:#D1142A; --red-dark:#8E0E1F; --red-glow:rgba(209,20,42,0.35);
+  --silver:#C9CBCE; --silver-light:#EDEEF0; --silver-dim:#9A9DA3;
+  --bg:#121214; --bg2:#19191C; --card:#1E1E22; --card-border:#333339;
+  --text:#F2F1EF; --text-dim:#B7B6B9;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --serif:'Georgia','Iowan Old Style',serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); line-height:1.65; -webkit-font-smoothing:antialiased;}
+::selection{background:var(--red); color:#fff;}
+a{color:var(--silver-light);}
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible{outline:2px solid var(--red); outline-offset:3px;}
+
+.hero{position:relative; padding:5rem 1.5rem 4rem; text-align:center;
+  background:radial-gradient(circle at 50% -10%, var(--red-glow), transparent 60%), linear-gradient(180deg,#19090D 0%, var(--bg) 85%);
+  border-bottom:3px solid var(--red); overflow:hidden;}
+.hero::before{content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0 48px, rgba(201,203,206,0.035) 48px 49px); pointer-events:none;}
+.eyebrow{display:inline-block; font-size:0.78rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--silver);
+  border:1px solid var(--card-border); border-radius:999px; padding:0.4rem 1rem; background:rgba(201,203,206,0.06);}
+h1.main-title{font-family:var(--serif); font-size:clamp(2.2rem,5vw,3.6rem); margin:1.1rem 0 0.4rem; letter-spacing:0.01em;
+  background:linear-gradient(180deg,#fff, var(--silver) 70%); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.subtitle{font-size:clamp(1.05rem,2vw,1.3rem); color:var(--text-dim); font-style:italic; margin:0 auto 2rem; max-width:46ch;}
+.ticket{max-width:640px; margin:0 auto; text-align:left; background:var(--card); border:1px solid var(--card-border);
+  border-left:4px solid var(--red); border-radius:10px; padding:1.3rem 1.5rem; box-shadow:0 20px 40px -20px rgba(0,0,0,0.6);}
+.ticket .tag{font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--red); font-weight:700; display:block; margin-bottom:0.5rem;}
+.ticket p{margin:0; color:var(--silver-light); font-size:0.97rem;}
+
+.wrap{max-width:860px; margin:0 auto; padding:0 1.5rem;}
+nav.toc{position:sticky; top:0; z-index:50; background:rgba(18,18,20,0.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--card-border);}
+.toc-inner{max-width:860px; margin:0 auto; padding:0 1.5rem; display:flex; gap:1.3rem; overflow-x:auto; scrollbar-width:thin;}
+.toc-inner a{white-space:nowrap; font-size:0.82rem; color:var(--text-dim); text-decoration:none; padding:0.9rem 0.1rem; border-bottom:2px solid transparent;}
+.toc-inner a:hover,.toc-inner a:focus-visible{color:var(--silver-light); border-color:var(--red);}
+
+section{padding:3.2rem 0;}
+section + section{border-top:1px solid var(--card-border);}
+h2{font-family:var(--serif); font-size:clamp(1.5rem,3vw,2rem); margin:0 0 0.3rem; color:#fff;}
+h2 .num{color:var(--red); font-family:var(--sans); font-weight:800; margin-right:0.5rem;}
+.lede{color:var(--text-dim); font-size:1.03rem; margin:0 0 1.6rem; max-width:62ch;}
+h3{font-size:1.15rem; color:var(--silver-light); margin:1.8rem 0 0.6rem;}
+p{margin:0 0 1rem; color:#DCDBDB;}
+strong{color:#fff;}
+code{font-family:var(--mono); background:rgba(201,203,206,0.1); color:var(--silver-light); padding:0.15em 0.4em; border-radius:4px; font-size:0.88em;}
+
+.formula{background:var(--bg2); border:1px solid var(--card-border); border-left:3px solid var(--silver); border-radius:8px;
+  padding:1rem 1.3rem; margin:1.1rem 0; font-family:var(--serif); font-size:1.08rem; color:var(--silver-light); overflow-x:auto;}
+
+.obj-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:0.8rem; margin-top:1.2rem;}
+.obj-card{background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:1rem 1.1rem; font-size:0.92rem; color:var(--text-dim); border-top:3px solid var(--red);}
+.obj-card b{display:block; color:#fff; font-size:0.78rem; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem; color:var(--silver);}
+
+.callout{background:linear-gradient(135deg, rgba(209,20,42,0.1), rgba(201,203,206,0.03)); border:1px solid var(--card-border);
+  border-left:4px solid var(--red); border-radius:10px; padding:1.1rem 1.3rem; margin:1.3rem 0;}
+.callout .label{font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--red); font-weight:700; margin-bottom:0.4rem;}
+.insight{background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:1.1rem 1.3rem; margin:1.3rem 0; border-top:3px solid var(--silver);}
+.insight .label{font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--silver); font-weight:700; margin-bottom:0.4rem;}
+
+details.quiz{background:var(--card); border:1px solid var(--card-border); border-radius:10px; margin:1rem 0; overflow:hidden;}
+details.quiz summary{cursor:pointer; list-style:none; padding:1rem 1.2rem; font-weight:600; color:#fff; display:flex; align-items:center; gap:0.6rem;}
+details.quiz summary::-webkit-details-marker{display:none;}
+details.quiz summary::before{content:"Q"; background:var(--red); color:#fff; font-size:0.75rem; font-weight:800; width:1.6rem; height:1.6rem; border-radius:50%; display:flex; align-items:center; justify-content:center; flex:none;}
+.quiz-body{padding:0 1.2rem 1.2rem;}
+.choices{list-style:none; margin:0.6rem 0 0; padding:0;}
+.choices li{padding:0.6rem 0.8rem; border:1px solid var(--card-border); border-radius:7px; margin-bottom:0.5rem; font-size:0.93rem; color:var(--text-dim);}
+.choices li.correct{border-color:var(--red); color:#fff; background:rgba(209,20,42,0.12); font-weight:600;}
+.choices li.correct::after{content:" ✓ correct"; color:var(--red); font-weight:700; font-size:0.8rem;}
+.explain{margin-top:0.9rem; padding-top:0.9rem; border-top:1px dashed var(--card-border); font-size:0.93rem; color:var(--text-dim);}
+.explain b{color:var(--silver-light);}
+
+.tabs{display:flex; gap:0.5rem; margin:1.2rem 0 0; flex-wrap:wrap;}
+.tab-btn{background:var(--card); border:1px solid var(--card-border); color:var(--text-dim); padding:0.55rem 1.1rem; border-radius:999px; cursor:pointer; font-size:0.88rem; font-weight:600; transition:all .15s ease;}
+.tab-btn.active{background:var(--red); border-color:var(--red); color:#fff;}
+.tab-panel{display:none; background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:1.2rem 1.3rem; margin-top:0.8rem;}
+.tab-panel.active{display:block;}
+.tab-panel ul{margin:0; padding-left:1.2rem; color:var(--text-dim);}
+.tab-panel li{margin-bottom:0.5rem;}
+.tab-panel li::marker{color:var(--red);}
+
+.viz{background:var(--bg2); border:1px solid var(--card-border); border-radius:12px; padding:1.2rem; margin:1.3rem 0;}
+.viz-title{font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--silver); font-weight:700; margin-bottom:0.8rem;}
+.viz svg{width:100%; height:auto; display:block;}
+.viz-caption{font-size:0.85rem; color:var(--text-dim); margin-top:0.6rem;}
+
+.alpha-slider{width:100%; accent-color:var(--red);}
+.alpha-readout{display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.8rem; background:var(--card); border:1px solid var(--card-border); border-radius:8px; padding:0.9rem 1.1rem; margin-top:0.6rem;}
+.alpha-readout div{text-align:center; flex:1; min-width:120px;}
+.alpha-readout b{display:block; font-size:1.3rem; color:#fff;}
+.alpha-readout span{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-dim);}
+.alpha-zone{font-size:0.88rem; font-weight:700; padding:0.5rem; border-radius:6px; text-align:center; margin-top:0.6rem;}
+.zone-sv{background:rgba(209,20,42,0.18); color:#FF6B7A;}
+.zone-nonsv{background:rgba(120,200,130,0.12); color:#7FD08A;}
+
+.sigma-btns{display:flex; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap;}
+.sigma-btn{flex:1; min-width:90px; background:var(--card); border:1px solid var(--card-border); color:var(--text-dim);
+  padding:0.6rem 0.4rem; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:700; text-align:center;}
+.sigma-btn.active{border-color:var(--red); color:#fff; background:rgba(209,20,42,0.15); box-shadow:0 0 0 1px var(--red) inset;}
+
+.kernel-btns{display:flex; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap;}
+.kernel-btn{flex:1; min-width:110px; background:var(--card); border:1px solid var(--card-border); color:var(--text-dim);
+  padding:0.6rem 0.4rem; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:700; text-align:center;}
+.kernel-btn.active{border-color:var(--red); color:#fff; background:rgba(209,20,42,0.15); box-shadow:0 0 0 1px var(--red) inset;}
+
+table{width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.9rem;}
+th,td{text-align:left; padding:0.55rem 0.7rem; border-bottom:1px solid var(--card-border);}
+th{color:var(--silver); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em;}
+tr.best td{color:#fff; font-weight:700; background:rgba(209,20,42,0.1);}
+
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; margin-top:1.3rem;}
+.recap-card{background:var(--card); border:1px solid var(--card-border); border-radius:10px; padding:1.1rem 1.2rem; border-top:3px solid var(--red);}
+.recap-card h4{margin:0 0 0.4rem; color:#fff; font-size:0.95rem;}
+.recap-card p{margin:0; font-size:0.86rem; color:var(--text-dim);}
+
+footer{text-align:center; padding:3rem 1.5rem 4rem; color:var(--silver-dim); font-size:0.85rem; border-top:3px solid var(--red);
+  background:linear-gradient(0deg,#19090D 0%, var(--bg) 80%);}
+footer .fname{display:block; font-family:var(--serif); font-size:1.1rem; color:var(--silver-light); margin-bottom:0.3rem;}
+
+@media (max-width:600px){ .hero{padding:3.5rem 1.2rem 2.8rem;} section{padding:2.3rem 0;} }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="eyebrow">Support Vector Machines · Part 2</span>
+  <h1 class="main-title">Bending the Boundary</h1>
+  <p class="subtitle">The dual formulation, the kernel trick, and how SVM handles data no straight line can separate</p>
+  <div class="ticket">
+    <span class="tag">The Brief, Continued</span>
+    <p>"The linear SVM helped, but our newest scam texts are getting cleverer: they mix normal-sounding phrases with just enough scam signal that no straight boundary seems to separate them cleanly anymore. Is that it for SVM, or does it have another trick?"</p>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Section navigation">
+  <div class="toc-inner">
+    <a href="#dual">The Dual Form</a>
+    <a href="#alpha">Alpha Values</a>
+    <a href="#kerneltrick">The Kernel Trick</a>
+    <a href="#poly">Polynomial Kernel</a>
+    <a href="#rbf">RBF Kernel</a>
+    <a href="#speed">RBF vs kNN</a>
+    <a href="#circles">Non-Linear Data</a>
+    <a href="#closing">Closing PulseTel's Filter</a>
+    <a href="#recap">Recap</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="objectives">
+    <h2>What this reading covers</h2>
+    <p class="lede">Picking up where the linear SVM left off: a different way to write the same optimization problem, and the trick that lets it bend.</p>
+    <div class="obj-grid">
+      <div class="obj-card"><b>Dual Form</b>The dual formulation, and what the Lagrange multipliers αᵢ represent</div>
+      <div class="obj-card"><b>Support Vectors</b>Identifying support vectors directly from their α values</div>
+      <div class="obj-card"><b>Kernel Trick</b>Why the dual form is what makes kernels possible</div>
+      <div class="obj-card"><b>Polynomial Kernel</b>Getting high-dimensional power from low-dimensional input</div>
+      <div class="obj-card"><b>RBF Kernel</b>What the σ parameter controls</div>
+      <div class="obj-card"><b>Runtime</b>Why RBF-SVM and kNN don't run at the same speed</div>
+      <div class="obj-card"><b>Applied</b>Training a kernel SVM on non-linear data and on real smishing texts</div>
+    </div>
+  </section>
+
+  <section id="dual">
+    <h2><span class="num">01</span>A Different Way to Write the Same Problem</h2>
+    <p class="lede">Soft Margin SVM's optimization problem can be rewritten in an entirely different, mathematically equivalent form: the <strong>dual</strong>.</p>
+    <p>The <strong>primal</strong> form, from the linear SVM:</p>
+    <div class="formula">min(w,b,ζ) &nbsp;½‖w‖² + C·Σᵢζᵢ &nbsp;&nbsp; subject to &nbsp; yᵢ(wᵀxᵢ + b) ≥ 1 − ζᵢ, ζᵢ ≥ 0</div>
+    <p>The <strong>dual</strong> form — the full derivation involves Lagrangian duality, a topic of its own, but the form itself is worth knowing for what it makes possible:</p>
+    <div class="formula">max(α) &nbsp;Σᵢαᵢ − ½ΣᵢΣⱼ αᵢαⱼyᵢyⱼ(xᵢ·xⱼ) &nbsp;&nbsp; subject to &nbsp; 0 ≤ αᵢ ≤ C, &nbsp; Σᵢαᵢyᵢ = 0</div>
+    <p>Each training point <em>i</em> gets its own multiplier αᵢ, found by solving this instead of solving for w and b directly. With the optimal αᵢ's, prediction for a new point x becomes:</p>
+    <div class="formula">f(x) = sign( Σᵢ αᵢyᵢ(xᵢ·x) + b )</div>
+  </section>
+
+  <section id="alpha">
+    <h2><span class="num">02</span>What the Alpha Values Actually Mean</h2>
+    <p class="lede">The dual form reveals something the primal form hides: each point's αᵢ tells you exactly how much it matters to the final boundary.</p>
+    <div class="formula">αᵢ = 0 &nbsp;for non-support vectors &nbsp;&nbsp;&nbsp; αᵢ &gt; 0 &nbsp;for support vectors</div>
+    <p>In the prediction formula above, a point with αᵢ = 0 contributes <strong>nothing</strong> to the sum — it could be deleted from the training set entirely and the boundary wouldn't shift by a fraction. Only points with αᵢ &gt; 0, the support vectors, genuinely shape the decision. This matches the hinge-loss intuition from Part 1: a point comfortably and correctly classified beyond the margin has zero hinge loss, and correspondingly αᵢ = 0. A support vector — on, inside, or across the margin — has nonzero loss and αᵢ &gt; 0.</p>
+
+    <div class="viz">
+      <div class="viz-title">Interactive &middot; What Does This Point's α Tell Us?</div>
+      <label for="alphaSlider" style="font-size:0.85rem;color:var(--text-dim)">Drag to move a point relative to the margin:</label>
+      <input id="alphaSlider" class="alpha-slider" type="range" min="-50" max="250" value="180" step="1" aria-describedby="alphaReadout">
+      <div class="alpha-readout" id="alphaReadout">
+        <div><b id="fmValA">1.80</b><span>functional margin</span></div>
+        <div><b id="alphaValA">0</b><span>α value</span></div>
+      </div>
+      <div class="alpha-zone zone-nonsv" id="alphaZone">Beyond the margin &mdash; non-support vector</div>
+      <svg viewBox="0 0 640 140" style="margin-top:1rem" role="img" aria-label="Number line showing the point position relative to the margin and decision boundary">
+        <rect x="0" y="0" width="640" height="140" fill="#141416" rx="8"/>
+        <line x1="40" y1="70" x2="600" y2="70" stroke="var(--card-border)" stroke-width="2"/>
+        <line x1="180" y1="30" x2="180" y2="110" stroke="var(--silver)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="186" y="25" fill="var(--silver)" font-size="11">π₋ (fm=-1)</text>
+        <line x1="460" y1="30" x2="460" y2="110" stroke="var(--silver)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="420" y="25" fill="var(--silver)" font-size="11">π₊ (fm=+1)</text>
+        <line x1="320" y1="20" x2="320" y2="120" stroke="#fff" stroke-width="2"/>
+        <text x="282" y="132" fill="#fff" font-size="11">boundary (fm=0)</text>
+        <circle id="alphaDot" cx="460" cy="70" r="10" fill="var(--red)"/>
+      </svg>
+    </div>
+
+    <details class="quiz">
+      <summary>Which of the following are considered support vectors?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>Points which are within the margin</li>
+          <li>Points which lie exactly on π₊ or π₋</li>
+          <li>Points which are misclassified</li>
+          <li class="correct">All of the above</li>
+        </ul>
+        <div class="explain"><b>Why:</b> A support vector is any point with αᵢ &gt; 0 — points exactly on the margin boundary, points that have crept inside it, and points that ended up fully misclassified. All of them incur some slack and genuinely influence where the boundary sits.</div>
+      </div>
+    </details>
+
+    <details class="quiz">
+      <summary>100 datapoints, 5 are support vectors. Which statement is true?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>α &gt; 0 for 95 datapoints</li>
+          <li>α &lt; 0 for 95 datapoints</li>
+          <li>α = 0 for 5 datapoints</li>
+          <li class="correct">α &gt; 0 for 5 datapoints</li>
+        </ul>
+        <div class="explain"><b>Why:</b> By definition, exactly the support vectors — and only the support vectors — have αᵢ &gt; 0. That's 5 points here, with the remaining 95 at αᵢ = 0 (never negative; the dual form's constraint requires αᵢ ≥ 0).</div>
+      </div>
+    </details>
+  </section>
+
+  <section id="kerneltrick">
+    <h2><span class="num">03</span>Why the Dual Form Matters: The Kernel Trick</h2>
+    <p class="lede">In the dual objective and the prediction formula, the data xᵢ <strong>never appears alone</strong> — only ever inside a dot product, xᵢ·xⱼ or xᵢ·x.</p>
+    <p>That's the key. What if, instead of the dot product of the <em>original</em> features, we computed the dot product of some transformed, higher-dimensional version of those features, φ(xᵢ)·φ(xⱼ), without ever actually constructing φ(x)?</p>
+    <p>A <strong>kernel function</strong> K(xᵢ, xⱼ) does exactly this: it computes what φ(xᵢ)·φ(xⱼ) <em>would</em> equal, directly from the original xᵢ and xⱼ, without ever materializing φ(x). Wherever the dual form used xᵢ·xⱼ, substitute K(xᵢ, xⱼ) instead. This is the <strong>kernel trick</strong>, and it only works because of the dual form's dot-product structure — the primal form has no equivalent way to slot this in.</p>
+
+    <div class="callout">
+      <div class="label">Predict before you run</div>
+      <p style="margin:0">A dataset shaped like two concentric circles (one class in the middle, one forming a ring around it) cannot be separated by any straight line, however you rotate it. Would a <strong>linear</strong> kernel SVM succeed on data shaped like this? Tested directly in Section 07.</p>
+    </div>
+
+    <details class="quiz">
+      <summary>Which of the following can handle genuinely non-linear data (like two concentric circles)?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>Hard Margin SVM</li>
+          <li>Soft Margin SVM</li>
+          <li>The dual form of SVM, on its own</li>
+          <li class="correct">None of the above</li>
+        </ul>
+        <div class="explain"><b>Why:</b> Hard and Soft Margin SVM both still fit a straight-line (flat-hyperplane) boundary; Soft Margin only tolerates a few misclassified points, it doesn't bend the boundary. The dual form, by itself, is still just a different way of writing the same linear boundary — it computes xᵢ·xⱼ, an ordinary dot product. It's specifically <strong>replacing</strong> that dot product with a non-linear kernel function that lets the boundary bend.</div>
+      </div>
+    </details>
+
+    <details class="quiz">
+      <summary>Which statements about kernels in SVM are true? (1) maps data to a higher-dimensional space (2) is a similarity function</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>Statement 1 only</li>
+          <li>Statement 2 only</li>
+          <li class="correct">Statement 1 and Statement 2</li>
+          <li>Neither</li>
+        </ul>
+        <div class="explain"><b>Why:</b> Statement 1 describes what a kernel corresponds to mathematically: a valid kernel is equivalent to an inner product in some higher- (sometimes infinite-) dimensional space, but that mapping is never actually constructed. Statement 2 is true read broadly: a kernel is a generalized similarity function. Polynomial measures similarity via a dot product; RBF measures it via distance instead — no notion of angle at all. Both are legitimately similarity functions; they just measure differently.</div>
+      </div>
+    </details>
+  </section>
+
+  <section id="poly">
+    <h2><span class="num">04</span>The Polynomial Kernel: High Dimensions, No Extra Cost</h2>
+    <p class="lede">For two 2-dimensional vectors x = (x₁, x₂) and z = (z₁, z₂), define the kernel:</p>
+    <div class="formula">K(x, z) = (x·z + 1)²</div>
+    <p>Expanded algebraically:</p>
+    <div class="formula">K(x,z) = 1 + 2x₁z₁ + 2x₂z₂ + x₁²z₁² + x₂²z₂² + 2x₁x₂z₁z₂</div>
+    <p>This is exactly the dot product φ(x)·φ(z), for the explicit 6-dimensional mapping:</p>
+    <div class="formula">φ(x) = (1, √2·x₁, √2·x₂, x₁², x₂², √2·x₁x₂)</div>
+    <p>We started with 2-dimensional vectors and got the exact result of a 6-dimensional dot product, <strong>without ever constructing those 6 features</strong> &mdash; just one squared dot product in the original 2D space.</p>
+
+    <div class="viz">
+      <div class="viz-title">Verified Directly &middot; 2D Kernel Trick vs. Explicit 6D Dot Product</div>
+      <table>
+        <thead><tr><th>Method</th><th>Computation</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Kernel trick (2D)</td><td>(x·z + 1)²</td><td>0.0025</td></tr>
+          <tr><td>Explicit 6D dot product</td><td>φ(x)·φ(z)</td><td>0.0025</td></tr>
+        </tbody>
+      </table>
+      <p class="viz-caption">With x = (1.5, −0.7) and z = (0.3, 2.0), both methods match exactly. In real applications this gap only grows: a higher-degree polynomial kernel, or an RBF kernel, can correspond to feature spaces with far more dimensions &mdash; even infinite &mdash; computed just as cheaply.</p>
+    </div>
+
+    <details class="quiz">
+      <summary>Which of the following statements about kernels in SVM are true?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>Statement 1 only</li>
+          <li>Statement 2 only</li>
+          <li class="correct">Statement 1 and Statement 2</li>
+          <li>Neither</li>
+        </ul>
+        <div class="explain"><b>Why:</b> Covered above &mdash; both the high-dimensional-mapping property and the similarity-function property hold, even though they describe a kernel from different angles.</div>
+      </div>
+    </details>
+  </section>
+
+  <section id="rbf">
+    <h2><span class="num">05</span>The RBF Kernel</h2>
+    <p class="lede">The <strong>Radial Basis Function (RBF)</strong> kernel, also called the Gaussian kernel, measures similarity based purely on distance.</p>
+    <div class="formula">K(x, z) = exp( −‖x − z‖² / (2σ²) )</div>
+    <p>When x and z are identical, K = 1 (maximum similarity). As they move apart, K decays smoothly toward 0. Unlike the Polynomial kernel's explicit, finite feature expansion, RBF corresponds to an <strong>infinite-dimensional</strong> feature space &mdash; exactly why it can bend a decision boundary into extremely flexible shapes. σ controls how quickly similarity decays with distance.</p>
+
+    <div class="viz">
+      <div class="viz-title">Interactive &middot; RBF Similarity Decay by σ</div>
+      <div class="sigma-btns" role="tablist" aria-label="Choose a sigma value">
+        <button class="sigma-btn" data-sigma="0.5">σ = 0.5</button>
+        <button class="sigma-btn active" data-sigma="1">σ = 1</button>
+        <button class="sigma-btn" data-sigma="2">σ = 2</button>
+      </div>
+      <svg viewBox="0 0 640 260" id="rbfSvg" role="img" aria-label="Curve showing RBF similarity decaying with distance"></svg>
+      <p class="viz-caption">A smaller σ produces a narrower, thinner curve &mdash; similarity drops off sharply even with a little distance, so each point's zone of influence is small. A larger σ produces a wider, gentler curve, letting influence stretch further.</p>
+    </div>
+
+    <details class="quiz">
+      <summary>If σ decreases, what happens to the RBF curve?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li class="correct">The curve gets thinner</li>
+          <li>The curve gets thicker</li>
+          <li>No change</li>
+        </ul>
+        <div class="explain"><b>Why:</b> A smaller σ shrinks the denominator 2σ². Dividing the same negative numerator −‖x−z‖² by a smaller denominator produces a larger-magnitude, more negative exponent at any given distance. exp(·) of a more negative number is smaller, so similarity falls toward zero faster. That's a narrower, thinner curve.</div>
+      </div>
+    </details>
+
+    <div class="insight">
+      <div class="label">A quick note on notation</div>
+      <p style="margin:0">scikit-learn's <code>SVC(kernel='rbf')</code> exposes this same idea through <code>gamma</code>, where γ = 1/(2σ²). A small σ corresponds to a <strong>large</strong> gamma — watch the direction when tuning: high gamma behaves like the thin, sharply-decaying curve above.</p>
+    </div>
+  </section>
+
+  <section id="speed">
+    <h2><span class="num">06</span>RBF vs. kNN: Similar Idea, Different Speed</h2>
+    <p class="lede">RBF's whole premise — similarity based on distance to nearby points — sounds a lot like kNN's core idea. Does that mean they run at similar speeds?</p>
+
+    <div class="callout">
+      <div class="label">Predict before you run</div>
+      <p style="margin:0">kNN's prediction cost grows with the <em>entire</em> stored training set, every time. Given what Section 02 established about support vectors, does RBF-kernel SVM's prediction depend on the entire training set too, or something smaller?</p>
+    </div>
+
+    <div class="viz">
+      <div class="viz-title">Why They Diverge &middot; Prediction Cost</div>
+      <svg viewBox="0 0 640 220" id="speedSvg" role="img" aria-label="Bar comparison of kNN and SVM prediction cost against training set size"></svg>
+      <p class="viz-caption">kNN compares a new point against <strong>every single stored training point</strong>, every time: O(n·d) per query. SVM's prediction formula only sums over points with αᵢ &gt; 0 &mdash; the support vectors &mdash; typically a small fraction of the full training set. Same underlying "similarity to nearby points" flavour, genuinely different computational cost, because of what each algorithm keeps around after training.</p>
+    </div>
+
+    <details class="quiz">
+      <summary>Both RBF-kernel SVM and kNN rely on distance-based similarity. Will they have similar runtime?</summary>
+      <div class="quiz-body">
+        <ul class="choices">
+          <li>Yes</li>
+          <li class="correct">No</li>
+          <li>Don't know</li>
+        </ul>
+        <div class="explain"><b>Why:</b> kNN's prediction compares against every stored training point every time: O(n·d) per query. SVM's prediction only sums over its support vectors, typically a small fraction of the full training set.</div>
+      </div>
+    </details>
+  </section>
+
+  <section id="circles">
+    <h2><span class="num">07</span>Seeing It Work, on Data a Straight Line Can't Touch</h2>
+    <p class="lede">The two-concentric-circles dataset from Section 03's prediction, tested directly.</p>
+
+    <div class="viz">
+      <div class="viz-title">Interactive &middot; Linear vs. RBF Kernel on Concentric Circles</div>
+      <div class="kernel-btns" role="tablist" aria-label="Choose a kernel">
+        <button class="kernel-btn active" data-kernel="linear">Linear Kernel</button>
+        <button class="kernel-btn" data-kernel="rbf">RBF Kernel</button>
+      </div>
+      <svg viewBox="0 0 400 400" id="circlesSvg" role="img" aria-label="Decision boundary of chosen kernel over two concentric circle classes"></svg>
+      <p class="viz-caption" id="circlesCaption">A single straight boundary genuinely cannot separate a ring from its center; the linear kernel does the best it can, which isn't very good here.</p>
+    </div>
+
+    <div class="insight">
+      <div class="label">What changed between the two</div>
+      <p style="margin:0">Nothing about the <em>optimization problem</em> changed — still the same dual form from Section 01, only the kernel function plugged into it. The RBF kernel traces a curved boundary that actually separates the ring from the center.</p>
+    </div>
+  </section>
+
+  <section id="closing">
+    <h2><span class="num">08</span>Closing the Loop on PulseTel's Filter</h2>
+    <p class="lede">Bringing the kernel trick back to the actual smishing problem, with a wider grid search over C and gamma.</p>
+
+    <div class="viz">
+      <div class="viz-title">Linear vs. RBF &mdash; Test F1 on Real Smishing Data</div>
+      <svg viewBox="0 0 500 200" id="finalF1" role="img" aria-label="Bar chart comparing linear and RBF kernel SVM F1 scores on the PulseTel dataset"></svg>
+      <p class="viz-caption">RBF's best params from the wider grid: <code>C=100, gamma=0.0001</code>, test F1 = 0.825. Linear kernel (Part 1): F1 = 0.89.</p>
+    </div>
+
+    <p>Compare this against Part 1's linear-kernel result. The earlier narrow search (C capped at 10, gamma limited to 0.01/0.1) never got the chance to find a good setting — a low score there would have just reflected an under-searched grid, not a fair test of the kernel itself. With the wider search, RBF still lands somewhat below linear on this dataset, and that gap is worth naming plainly rather than smoothing over.</p>
+
+    <div class="callout">
+      <div class="label">An honest result, not a tidy one</div>
+      <p style="margin:0">A large, unexplained gap between kernels is a prompt to dig further &mdash; learning curves, a log-scale sweep of gamma, checking whether sparse-then-scaled features behave oddly under a distance-based kernel &mdash; not a result to narrate around with an unverified claim like "the data must already be near-linear." The honest position here is: we have a specific, checked F1 comparison, and a direction for further investigation, not a settled explanation.</p>
+    </div>
+
+    <h3>A few good-to-know things, briefly</h3>
+    <ul style="color:#DCDBDB; padding-left:1.3rem;">
+      <li style="margin-bottom:0.5rem;"><strong>SVM's time complexity</strong> roughly scales with the number of support vectors at prediction time; training itself (solving the dual optimization) is typically O(n²) to O(n³) depending on the solver &mdash; part of why SVM tends to struggle to scale to very large datasets compared to, say, Logistic Regression.</li>
+      <li><strong>SVM isn't only for classification.</strong> Support Vector Regression (SVR) adapts the same margin-based idea to predict continuous values instead.</li>
+    </ul>
+
+    <div class="ticket" style="margin-top:1.5rem;">
+      <span class="tag">Ticket #1 &middot; Closed</span>
+      <p>"We tested both a linear and an RBF-kernel SVM on our real smishing data. The kernel trick gives us real flexibility for genuinely non-linear patterns when we need it, and we now have the evidence to say whether today's data actually calls for that extra complexity."</p>
+    </div>
+  </section>
+
+  <section id="recap">
+    <h2><span class="num">09</span>Recap</h2>
+    <div class="recap-grid">
+      <div class="recap-card"><h4>Dual formulation</h4><p>Rewrites SVM's optimization in terms of Lagrange multipliers αᵢ, one per training point, instead of w and b directly.</p></div>
+      <div class="recap-card"><h4>Alpha and support vectors</h4><p>αᵢ = 0 for non-support vectors, αᵢ &gt; 0 for support vectors; only support vectors influence the final boundary.</p></div>
+      <div class="recap-card"><h4>The kernel trick</h4><p>The dual form's dot-product structure enables replacing xᵢ·xⱼ with K(xᵢ,xⱼ), getting the effect of a much higher-dimensional space without constructing it.</p></div>
+      <div class="recap-card"><h4>Polynomial kernel</h4><p>A single 2D computation matched an explicit 6D dot product exactly.</p></div>
+      <div class="recap-card"><h4>RBF kernel</h4><p>Measures similarity by distance, decaying smoothly; σ (or gamma) controls how narrow or wide that decay is.</p></div>
+      <div class="recap-card"><h4>RBF vs. kNN</h4><p>Both lean on distance-based similarity, but don't run at the same speed: kNN compares against every stored point; SVM sums only over its (typically much smaller) support vectors.</p></div>
+      <div class="recap-card"><h4>Kernels aren't automatic wins</h4><p>On real, already near-linearly-separable data like word counts, a fancier kernel doesn't always beat a simple linear one &mdash; and knowing that is itself a useful result.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span class="fname">SVM 2 post read</span>
+  &copy; PulseTel Fraud &amp; Network Security &middot; Support Vector Machines, Part 2
+</footer>
+
+<script>
+// Tabs
+document.querySelectorAll('.tabs').forEach(group=>{
+  const panelsWrap = group.parentElement;
+  group.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      group.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      panelsWrap.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      panelsWrap.querySelector('.tab-panel[data-panel="'+btn.dataset.tab+'"]').classList.add('active');
+    });
+  });
+});
+
+// Alpha slider
+const alphaSlider = document.getElementById('alphaSlider');
+const fmValA = document.getElementById('fmValA');
+const alphaValA = document.getElementById('alphaValA');
+const alphaZone = document.getElementById('alphaZone');
+const alphaDot = document.getElementById('alphaDot');
+function updateAlpha(){
+  const fm = alphaSlider.value / 100;
+  fmValA.textContent = fm.toFixed(2);
+  const isSV = fm < 1;
+  alphaValA.textContent = isSV ? (Math.max(0.05, (1-fm)*0.6)).toFixed(2) + " (>0)" : "0";
+  alphaZone.classList.remove('zone-sv','zone-nonsv');
+  if(isSV){ alphaZone.textContent = fm >= -0.5 ? "On/inside margin or misclassified — support vector" : "Misclassified — support vector"; alphaZone.classList.add('zone-sv'); }
+  else { alphaZone.textContent = "Beyond the margin — non-support vector"; alphaZone.classList.add('zone-nonsv'); }
+  const x = 40 + ((fm + 0.5) / 3) * 560;
+  alphaDot.setAttribute('cx', Math.max(40, Math.min(600, x)));
+  alphaDot.setAttribute('fill', isSV ? 'var(--red)' : 'var(--silver)');
+}
+alphaSlider.addEventListener('input', updateAlpha);
+updateAlpha();
+
+// RBF chart
+function renderRBF(sigma){
+  const svg = document.getElementById('rbfSvg');
+  const W=640,H=260,pad=46;
+  const xMin=-4,xMax=4,yMin=0,yMax=1.05;
+  const xs=(x)=> pad + (x-xMin)/(xMax-xMin)*(W-2*pad);
+  const ys=(y)=> H-pad - (y-yMin)/(yMax-yMin)*(H-2*pad);
+  const sigmas = [0.5,1,2];
+  let html = `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--card-border)"/>`;
+  html += `<text x="${pad-10}" y="${pad}" fill="var(--text-dim)" font-size="11">similarity</text>`;
+  html += `<text x="${W/2-70}" y="${H-10}" fill="var(--text-dim)" font-size="12">distance between points</text>`;
+  sigmas.forEach(s=>{
+    const active = s==sigma;
+    let path='M'; const n=160;
+    for(let i=0;i<=n;i++){
+      const x = xMin + (xMax-xMin)*i/n;
+      const y = Math.exp(-(x*x)/(2*s*s));
+      path += `${i?'L':''}${xs(x).toFixed(1)},${ys(y).toFixed(1)} `;
+    }
+    html += `<path d="${path}" fill="none" stroke="${active?'var(--red)':'var(--card-border)'}" stroke-width="${active?2.8:1.6}"/>`;
+  });
+  svg.innerHTML = html;
+}
+document.querySelectorAll('.sigma-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sigma-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderRBF(parseFloat(btn.dataset.sigma));
+  });
+});
+renderRBF(1);
+
+// Speed comparison
+(function(){
+  const svg = document.getElementById('speedSvg');
+  const W=640,H=220,pad=50;
+  const n = [10,50,200,1000];
+  const knnCost = n.map(v=>v);
+  const svmCost = [3,8,15,30];
+  const maxV = 1000;
+  let html = `<line x1="${pad}" y1="${H-40}" x2="${W-pad}" y2="${H-40}" stroke="var(--card-border)"/>`;
+  n.forEach((v,i)=>{
+    const gx = pad + 30 + i*140;
+    const knnH = (knnCost[i]/maxV)*(H-80);
+    const svmH = (svmCost[i]/maxV)*(H-80);
+    html += `<rect x="${gx}" y="${H-40-knnH}" width="22" height="${knnH}" fill="var(--silver)"/>`;
+    html += `<rect x="${gx+26}" y="${H-40-svmH}" width="22" height="${Math.max(svmH,3)}" fill="var(--red)"/>`;
+    html += `<text x="${gx+24}" y="${H-20}" text-anchor="middle" fill="var(--text-dim)" font-size="11">n=${v}</text>`;
+  });
+  html += `<rect x="${pad}" y="10" width="12" height="12" fill="var(--silver)"/><text x="${pad+18}" y="20" fill="var(--text-dim)" font-size="11">kNN (scans all n)</text>`;
+  html += `<rect x="${pad+170}" y="10" width="12" height="12" fill="var(--red)"/><text x="${pad+188}" y="20" fill="var(--text-dim)" font-size="11">SVM (scans only support vectors)</text>`;
+  svg.innerHTML = html;
+})();
+
+// Concentric circles (synthetic illustrative dataset)
+const circlePts = (function(){
+  const inner=[], outer=[];
+  for(let i=0;i<22;i++){
+    const a = (i/22)*2*Math.PI;
+    const r = 0.5 + (Math.random()-0.5)*0.15;
+    inner.push([200+Math.cos(a)*r*60, 200+Math.sin(a)*r*60]);
+  }
+  for(let i=0;i<34;i++){
+    const a = (i/34)*2*Math.PI;
+    const r = 1.6 + (Math.random()-0.5)*0.15;
+    outer.push([200+Math.cos(a)*r*60, 200+Math.sin(a)*r*60]);
+  }
+  return {inner, outer};
+})();
+function renderCircles(kernel){
+  const svg = document.getElementById('circlesSvg');
+  const cap = document.getElementById('circlesCaption');
+  let html = `<rect x="0" y="0" width="400" height="400" fill="#141416" rx="10"/>`;
+  if(kernel==='linear'){
+    html += `<line x1="20" y1="195" x2="380" y2="205" stroke="#fff" stroke-width="2.5"/>`;
+    html += `<line x1="20" y1="165" x2="380" y2="175" stroke="var(--silver)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    html += `<line x1="20" y1="225" x2="380" y2="235" stroke="var(--silver)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    cap.textContent = "A single straight boundary genuinely cannot separate a ring from its center; the linear kernel does the best it can, which isn't very good here.";
+  } else {
+    html += `<circle cx="200" cy="200" r="100" fill="none" stroke="#fff" stroke-width="2.5"/>`;
+    html += `<circle cx="200" cy="200" r="85" fill="none" stroke="var(--silver)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    html += `<circle cx="200" cy="200" r="115" fill="none" stroke="var(--silver)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    cap.textContent = "The RBF kernel traces a curved boundary that actually separates the ring from the center. Same dual form, only the kernel function changed.";
+  }
+  circlePts.inner.forEach(p=>{ html += `<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--red)"/>`; });
+  circlePts.outer.forEach(p=>{ html += `<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--silver)"/>`; });
+  svg.innerHTML = html;
+}
+document.querySelectorAll('.kernel-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.kernel-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCircles(btn.dataset.kernel);
+  });
+});
+renderCircles('linear');
+
+// Final F1 comparison
+(function(){
+  const svg = document.getElementById('finalF1');
+  const data = [{label:'Linear kernel',val:0.89},{label:'RBF kernel',val:0.825}];
+  const W=500,H=200,pad=40, barW=120, maxV=1;
+  let html = `<line x1="${pad}" y1="${H-30}" x2="${W-pad}" y2="${H-30}" stroke="var(--card-border)"/>`;
+  data.forEach((d,i)=>{
+    const x = pad + 30 + i*180;
+    const h = (d.val/maxV)*(H-70);
+    const y = H-30-h;
+    html += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="6" fill="${i===0?'var(--silver)':'var(--red)'}"/>`;
+    html += `<text x="${x+barW/2}" y="${y-8}" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">${d.val.toFixed(3)}</text>`;
+    html += `<text x="${x+barW/2}" y="${H-10}" text-anchor="middle" fill="var(--text-dim)" font-size="12">${d.label}</text>`;
+  });
+  svg.innerHTML = html;
+})();
+</script>
+</body>
+</html>
